@@ -1,0 +1,56 @@
+---
+- name: Install docker, docker-compose, net-tools 
+  hosts: all
+  pre_tasks:
+    - name: Add Docker official GPG key
+      become: true
+      apt_key:
+        url: "https://download.docker.com/linux/ubuntu/gpg"
+        state: present 
+    - name: Update apt 
+      become: true
+      ansible.builtin.apt:
+        upgrade: yes
+        update_cache: yes
+  tasks:
+    - name: Install docker
+      become: true
+      ansible.builtin.apt:
+        name: docker
+        state: present
+    - name: Install docker-compose
+      become: true
+      ansible.builtin.get_url:
+        url: "https://github.com/docker/compose/releases/download/1.25.1-rc1/docker-compose-Linux-x86_64"
+        dest: "/usr/local/bin/docker-compose"
+        mode: "u+x,g+x"
+    - name: Install net-tools
+      become: true
+      ansible.builtin.apt:
+        name: net-tools
+        state: present
+  post_tasks:
+    - name: Add remote user to docker group 
+      become: true
+      user:
+        name: "{{ username }}"
+        group: docker 
+        append: yes 
+
+- name: Install gitlab-runner
+  hosts: all
+  tasks:       
+    - name: Download script for install gitlab-runner
+      become: true
+      ansible.builtin.get_url:
+        url: "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh"
+        dest: "/tmp/gitlab-runner/script.sh"
+        mode: "0755"
+    - name:  Script running
+      command: /tmp/gitlab-runner/script.sh
+    - name: Install gitlab-runner
+      ansible.builtin.apt:
+        become: true
+        name: gitlab-runner
+        state: present 
+
