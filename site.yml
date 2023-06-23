@@ -1,29 +1,24 @@
 ---
 - name: Install docker, docker-compose, net-tools 
   hosts: all
-  pre_tasks:
-    - name: Add Docker official GPG key
-      become: true
-      apt_key:
-        url: "https://download.docker.com/linux/ubuntu/gpg"
-        state: present 
-    - name: Update apt 
-      become: true
-      ansible.builtin.apt:
-        upgrade: yes
-        update_cache: yes
+  tags: docker
   tasks:
     - name: Install docker
       become: true
       ansible.builtin.apt:
         name: docker
         state: present
+    - name: Install docker.io
+      become: true
+      ansible.builtin.apt:
+        name: docker.io
+        state: present
     - name: Install docker-compose
       become: true
       ansible.builtin.get_url:
         url: "https://github.com/docker/compose/releases/download/1.25.1-rc1/docker-compose-Linux-x86_64"
         dest: "/usr/local/bin/docker-compose"
-        mode: "u+x,g+x"
+        mode: "+x"
     - name: Install net-tools
       become: true
       ansible.builtin.apt:
@@ -34,23 +29,80 @@
       become: true
       user:
         name: "{{ username }}"
-        group: docker 
+        groups: docker 
         append: yes 
 
 - name: Install gitlab-runner
   hosts: all
+  tags: gitlab-runner
   tasks:       
     - name: Download script for install gitlab-runner
       become: true
       ansible.builtin.get_url:
         url: "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh"
-        dest: "/tmp/gitlab-runner/script.sh"
+        dest: "./script.sh"
         mode: "0755"
     - name:  Script running
-      command: /tmp/gitlab-runner/script.sh
+      become: true
+      command: "./script.sh"
     - name: Install gitlab-runner
+      become: true
       ansible.builtin.apt:
-        become: true
         name: gitlab-runner
         state: present 
+  post_tasks:
+    - name: add user to gitlab-runner group
+      become: true
+      user:
+        name: "{{ username }}"
+        groups: gitlab-runner
+        append: yes
+    - name: add gitlab-runner to user group 
+      become: true
+      user:
+        name: gitlab-runner
+        groups: "{{ username }}"
+        append: yes
+    - name: add docker to gitlab-runner group
+      become: true
+      user:
+        name: docker
+        groups: gitlab-runner
+        append: yes
 
+- name: Up docker struct
+  hosts: all 
+  tags: struct-up
+  pre_tasks: 
+    - name: Create a directory for configuration  
+      ansible.builtin.file:
+        path: /home/${USER}/docker/nginx/sites-enable 
+        state: directory
+    - name: Copy nginx global configuration
+      template:
+        src: templates/nginx.conf.j2
+        dest: /home/${USER}/docker/nginx/nginx.conf
+        mode: "0755"
+    - name: Copy docker-compose.yml config 
+      template: 
+        src: templates/docker-compose-struct.yml.j2
+        dest: /home/${USER}/docker/docker-compose.yml
+        mode: "0755"
+    - name: Install pip for python
+      become: true 
+      ansible.builtin.apt:
+        name: python3-pip
+        state: present
+    - name: Install docker for python
+      become: true
+      ansible.builtin.pip:
+        name: "{{ item }}"
+        state: present
+      with_items: 
+        - docker
+        - docker-compose 
+  tasks:
+    - name: Up docker containers
+      community.docker.docker_compose:
+        project_src: /home/${USER}/docker
+      register: output

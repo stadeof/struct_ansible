@@ -1,0 +1,3 @@
+---
+username: "username"
+ansible_sudo_pass: "password"
