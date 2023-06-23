@@ -73,10 +73,20 @@
 - name: Up docker struct
   hosts: all 
   tags: struct-up
+  handlers:
+    - name: Restart docker service
+      become: true
+      ansible.builtin.service:
+        name: docker
+        state: restarted
   pre_tasks: 
     - name: Create a directory for configuration  
       ansible.builtin.file:
         path: /home/${USER}/docker/nginx/sites-enable 
+        state: directory
+    - name: Create a directory for projects  
+      ansible.builtin.file:
+        path: /home/${USER}/projects
         state: directory
     - name: Copy nginx global configuration
       template:
@@ -101,8 +111,32 @@
       with_items: 
         - docker
         - docker-compose 
+      notify: Restart docker service
+    - name: Reset ssh connection to allow user changes to affect ansible user
+      ansible.builtin.meta:
+        reset_connection
   tasks:
     - name: Up docker containers
       community.docker.docker_compose:
-        project_src: /home/${USER}/docker
+        project_src: /home/${USER}/docker/
       register: output
+
+- name: Start node-exporter container
+  hosts: all
+  tags: node-exporter
+  pre_tasks:
+    - name: Create folder for node-exporter
+      ansible.builtin.file:
+        path: /home/${USER}/projects/node-exporter 
+        state: directory
+    - name: Copy node-exporter.yml in folder
+      template:
+        src: templates/node-exporter.yml.j2
+        dest: /home/${USER}/projects/node-exporter/docker-compose.yml
+        mode: "0755"
+  tasks:
+    - name: Up container
+      community.docker.docker_compose:
+        project_src: /home/${USER}/projects/node-exporter/
+      register: output
+

@@ -2,6 +2,6 @@
 srv1:
   hosts:
     srv1:
-      ansible_host: ip
-      ansible_user: user
+      ansible_host: 158.160.21.174
+      ansible_user: denis
       ansible_port: 22

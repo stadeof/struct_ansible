@@ -9,6 +9,8 @@
 2. container_name: **db** | image: **postgres**
 3. container_name: **redis** | image: **redis**
 
+Последним play запускается **node-exporter** на порту 9100
+
 ## inventory
 
 В файле prod.yml описываем хосты, на которых необходимо выполнять playbook. Меняем значения **ansible_host**, **ansible_user**
@@ -35,11 +37,12 @@ ansible_sudo_pass: "password"
 
 ## tags
 
-Добавлены 3 tags для запуска plays по отдельности:
+Добавлены 4 tags для запуска plays по отдельности:
 
 1. **docker** - устанавливает docker, docker-compose, net-tools и добавляет пользователя "{{ username }}" в группу docker
 2. **gitlab-runner** - устанавливает gitlab-runner, добавляет "{{ username }}" в группу gitlab-runner, gitlab-runner в группу "{{ username }}" и пользователя "{{ username }}" в группу gitlab-runner
-3. **struct-up** - создает директории /home/\$USER/docker/nginx/sites-enable, копирует template nginx.conf.j2 по пути /home/\$USER/docker/nginx/nginx.conf, копирует template docker-compose-struct.yml.j2 по адресу /home/\$USER/docker/docker-compose.yml и запускает docker-compose.yml. Данная таска будет корректно выполнена, только при условии установки docker, docker-compose и выдачи необходимых permissions.
+3. **struct-up** - создает директории /home/\$USER/docker/nginx/sites-enable, копирует template nginx.conf.j2 по пути /home/\$USER/docker/nginx/nginx.conf, копирует template docker-compose-struct.yml.j2 по адресу /home/\$USER/docker/docker-compose.yml и запускает docker-compose.yml. Данная таска будет корректно выполнена, только при условии установки docker, docker-compose и выдачи необходимых permissions
+4. **node-exporter** - запускает docker контейнер для сбора метрик машины 
 
 ## Запуск playbook
 
